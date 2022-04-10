@@ -1,7 +1,9 @@
 import React, {useEffect, useState, useRef, useCallback} from 'react';
-import { StyleSheet, Text, View, TextInput, SectionList, SafeAreaView, Image, ScrollView  } from 'react-native';
-
+import { StyleSheet, Text, View, TextInput, SectionList, SafeAreaView, Image  } from 'react-native';
+import { Fragment } from 'react/cjs/react.production.min';
+import FormGroup from '../../components/Info/FormGroup';
 import APIService from '../../services/API.service';
+import { calBaseATK, calBaseDEF, calBaseSTA, sortStatsPokemon } from '../../components/Calculate/Calculate';
 
 const Pokemon = (props) => {
 
@@ -56,7 +58,6 @@ const Pokemon = (props) => {
         let dataFromList = [];
         await Promise.all(data.varieties.map(async (value, index) => {
             const poke_info = await APIService.getFetchUrl(value.pokemon.url);
-            // const poke_form = await APIService.getFetchUrl(poke_info.data.forms[0].url);
             const poke_form = await Promise.all(poke_info.data.forms.map(async (item) => (await APIService.getFetchUrl(item.url)).data));
             dataPokeList.push(poke_info.data);
             dataFromList.push(poke_form);
@@ -87,29 +88,24 @@ const Pokemon = (props) => {
     }, [getRatioGender, fetchMap, dataPri]);
 
     useEffect(() => {
-        if (!initialize.current) {
-            APIService.getFetchUrl('https://itsjavi.com/pokemon-assets/assets/data/pokemon.json')
-            .then(res => {
-                setStats(sortStatsPokemon(convertArrStats(res.data)));
-                setDataPri(res.data);
+        const fetchMyAPI = async () => {
+            if (!initialize.current) {
+                const resData = await APIService.getFetchUrl('https://itsjavi.com/pokemon-assets/assets/data/pokemon.json');
+                setStats(sortStatsPokemon(convertArrStats(resData.data)));
+                setDataPri(resData.data);
 
-                return APIService.getPokeJSON('released_pokemon.json');
-            })
-            .then(res => {
-                setReleased(res.data);
-                return APIService.getPokeJSON('type_effectiveness.json');
-            })
-            .then(res => {
-                setTypeEffective(res.data);
-                console.log(res.data)
-                return APIService.getPokeJSON('weather_boosts.json');
-            })
-            .then(res => {
-                setWeatherEffective(res.data);
-            })
-            .finally(initialize.current = true);
-        } else {
-            console.log(dataPri)
+                const resTypes = await APIService.getPokeJSON('type_effectiveness.json');
+                setTypeEffective(resTypes.data);
+
+                const resWerthers = await APIService.getPokeJSON('weather_boosts.json');
+                setWeatherEffective(resWerthers.data);
+
+                initialize.current = true;
+            }
+        }
+        fetchMyAPI();
+
+        if (initialize.current) {
             queryPokemon(props.id);
         }
     }, [props.id, queryPokemon]);
@@ -123,10 +119,48 @@ const Pokemon = (props) => {
     }
 
     return (
-        <View>
-            <Text>{props.id}</Text>
+        <View style={styles.imgContainerPoke}>
+            {data && stats &&
+                <Fragment>
+                    <View>
+                        <Image source={{uri: APIService.getPokeFullSprite(data.id), width: 200, height: 200}}/>
+                    </View>
+                    <Text style={styles.textDesc}>ID: <Text style={styles.id}>#{props.id}</Text></Text>
+                    <Text style={styles.textDesc}>Name: <Text style={styles.id}>{splitAndCapitalize(data.name)}</Text></Text>
+                    <Text style={styles.textDesc}>Generation: <Text style={styles.id}>{data.generation.name.split("-")[1].toUpperCase()}</Text> <Text style={{color: 'gray', fontSize: 16}}>({getNumGen(data.generation.url)})</Text></Text>
+                    <Text style={styles.textDesc}>Version: <Text style={styles.id}>{version}</Text></Text>
+                    {initialize.current && pokeData.length === data.varieties.length && formList.length === data.varieties.length &&
+                        <Fragment>
+                            <FormGroup
+                            setVersion={setVersionName}
+                            id_default={data.id}
+                            pokeData={pokeData}
+                            pokemonRaito={pokeRatio}
+                            formList={formList}
+                            ratio={pokeRatio}
+                            typeEffective={typeEffective}
+                            weatherEffective={weatherEffective}
+                            stats={stats}
+                            species={data}/>
+                        </Fragment>
+                    }
+                </Fragment>
+            }
         </View>
     )
 }
+
+const styles = StyleSheet.create({
+    imgContainerPoke: {
+        alignItems: 'center',
+    },
+    textDesc: {
+        fontSize: 20,
+        color: 'black',
+    },
+    id: {
+        fontWeight: 'bold',
+    },
+});
 
 export default Pokemon;

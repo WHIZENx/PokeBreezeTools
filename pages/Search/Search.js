@@ -1,5 +1,5 @@
 import React, {useEffect, useMemo, useState, useRef} from 'react';
-import { StyleSheet, Text, View, TextInput, SectionList, SafeAreaView, Image, ScrollView, TextView  } from 'react-native';
+import { StyleSheet, Text, View, TextInput, SectionList, SafeAreaView, Image, ScrollView, TextView, Button, TouchableOpacity, Dropdown  } from 'react-native';
 
 import APIService from '../../services/API.service';
 
@@ -13,13 +13,13 @@ const Item = ({ name }) => (
 
 const Search = () => {
 
-	const cardHeight = 65;
+	const cardHeight = 67;
     const pageCardScroll = 10;
 
 	const searchResult = useRef(null);
     const searchResultID = useRef(0);
 
-	const [id, setId] = useState(1);
+	const [id, setId] = useState(890);
 
 	const pokeList = useMemo(() => {return []}, []);
 
@@ -48,17 +48,8 @@ const Search = () => {
         setPokemonListFilter(currentPokemonListFilter.current.slice(0, 20));
 	}, [searchTerm, pokemonList, pokeList]);
 
-	const listenScrollEvent = (ele) => {
-        let idScroll = Math.floor(ele.nativeEvent.contentOffset.y / (cardHeight*pageCardScroll));
-		console.log(idScroll)
-        if (idScroll < searchResultID.current) return;
-        searchResultID.current = idScroll;
-        setPokemonListFilter([...pokemonListFilter, ...currentPokemonListFilter.current.slice(idScroll*pageCardScroll, idScroll*pageCardScroll+pageCardScroll)])
-    }
-
 	const getInfoPoke = (value) => {
-		console.log(value)
-        const id = parseInt(value.currentTarget.dataset.id);
+        const id = parseInt(value.id);
         setShowResult(false);
         setId(id);
     };
@@ -72,27 +63,26 @@ const Search = () => {
 			<Text style={styles.head}>Pokemon Search Infomation</Text>
 			<TextInput style={styles.input} placeholder="Enter name or ID"
 			value={searchTerm} onChangeText={(value) => setSearchTerm(value)}
-			onBlur={ () => setShowResult(false) }
+			// onBlur={ () => setShowResult(false) }
     		onFocus={ () => setShowResult(true) }/>
 			{showResult &&
-				<ScrollView style={styles.container} ref={searchResult}
-				onScroll={listenScrollEvent.bind(this)}>
+				<ScrollView style={styles.container}>
 					{pokemonListFilter.map((item, index) => (
-						<Text key={index} style={styles.item} onTouchStart={(value) => getInfoPoke(value)} value={item.id}>
+						<TouchableOpacity key={index} style={styles.item} onPress={() => getInfoPoke(item)}>
 							<Text>
 								<Text style={styles.id}>#{item.id} </Text>
-								<Image
-									style={styles.tinyLogo}
-									source={{uri: item.sprites, width: 36, height: 36}}
+								<Image source={{uri: item.sprites, width: 36, height: 36}}
 								/>
 								<Text style={styles.name}> {item.name}</Text>
 							</Text>
-						</Text>
+						</TouchableOpacity>
 					))
 					}
 				</ScrollView >
 			}
-			<Pokemon id={id} onSetIDPoke={setIDPoke}/>
+			<ScrollView>
+				<Pokemon id={id} onSetIDPoke={setIDPoke}/>
+			</ScrollView>
 		</View>
 	)
 }
@@ -101,8 +91,14 @@ const styles = StyleSheet.create({
 	container: {
 		borderWidth: 1,
 		marginHorizontal: 16,
-		height: 330,
-		overflow: 'scroll'
+		height: 335,
+		overflow: 'scroll',
+		position: 'absolute',
+		left: 0,
+		right: 0,
+		zIndex: 1,
+		backgroundColor: 'white',
+		marginTop: 100
 	},
 	input: {
 	  height: 40,
